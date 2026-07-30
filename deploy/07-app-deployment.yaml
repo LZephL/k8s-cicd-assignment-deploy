@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: attendance-app
+  namespace: attendance
+  labels:
+    app.kubernetes.io/name: attendance-app
+    app.kubernetes.io/part-of: attendance-management
+spec:
+  # ハンズオンではアプリを1 Podで起動する
+  replicas: 1
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 300
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: attendance-app
+      app.kubernetes.io/component: application
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: attendance-app
+        app.kubernetes.io/component: application
+        app.kubernetes.io/part-of: attendance-management
+    spec:
+      # Dockerfileで設定した非rootユーザーと同じUIDで実行する
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: attendance-app
+          # 開発repoのworkflow TODO: tagを自動的に更新ができるように
+          image: dkerlzeph/attendance-management:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # 秘密情報以外のアプリ設定をConfigMapからまとめて取得する
+          envFrom:
+            - configMapRef:
+                name: attendance-config
+
+          # パスワードはGit管理せず、クラスタ上のSecretから取得する
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: attendance-secrets
+                  key: DB_PASSWORD
+            - name: APP_SEED_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: attendance-secrets
+                  key: APP_SEED_ADMIN_PASSWORD
+            - name: APP_SEED_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: attendance-secrets
+                  key: APP_SEED_USER_PASSWORD
+
+          # ログイン画面が応答してからServiceの接続先へ追加する
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
+
+          # Spring Bootコンテナが使用するCPUとメモリの目安を設定する
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+
+          # コンテナからの権限昇格とルートファイルシステムへの書き込みを防ぐ
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          # Spring Bootが一時ファイルを書けるよう/tmpだけを用意する
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
