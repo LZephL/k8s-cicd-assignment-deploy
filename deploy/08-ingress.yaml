@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: attendance
+  namespace: attendance
+  labels:
+    app.kubernetes.io/name: attendance-app
+    app.kubernetes.io/part-of: attendance-management
+spec:
+  # 事前導入済みのingress-nginxを使用する
+  ingressClassName: nginx
+  # hostを指定せず、ロードバランサーのパブリックIPアドレスへのリクエストを受け付ける
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: attendance-app
+                port:
+                  number: 80
