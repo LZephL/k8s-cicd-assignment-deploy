@@ -28,22 +28,19 @@ spec:
         runAsUser: 10001
         seccompProfile:
           type: RuntimeDefault
-
       containers:
         - name: attendance-app
           # 開発repoのworkflow TODO: tagを自動的に更新ができるように !
-          image: dkerlzeph/attendance-management:1.0.0
+          image: dkerlzeph/attendance-management:1.0.4
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8080
               protocol: TCP
-
           # 秘密情報以外のアプリ設定をConfigMapからまとめて取得する
           envFrom:
             - configMapRef:
                 name: attendance-config
-
           # パスワードはGit管理せず、クラスタ上のSecretから取得する
           env:
             - name: DB_PASSWORD
@@ -61,7 +58,6 @@ spec:
                 secretKeyRef:
                   name: attendance-secrets
                   key: APP_SEED_USER_PASSWORD
-
           # ログイン画面が応答してからServiceの接続先へ追加する
           readinessProbe:
             httpGet:
@@ -71,7 +67,6 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 12
-
           # Spring Bootコンテナが使用するCPUとメモリの目安を設定する
           resources:
             requests:
@@ -80,7 +75,6 @@ spec:
             limits:
               cpu: 500m
               memory: 768Mi
-
           # コンテナからの権限昇格とルートファイルシステムへの書き込みを防ぐ
           securityContext:
             allowPrivilegeEscalation: false
@@ -88,12 +82,10 @@ spec:
             capabilities:
               drop:
                 - ALL
-
           # Spring Bootが一時ファイルを書けるよう/tmpだけを用意する
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-
       volumes:
         - name: tmp
           emptyDir:
