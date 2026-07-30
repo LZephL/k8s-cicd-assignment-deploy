@@ -31,7 +31,7 @@ spec:
 
       containers:
         - name: attendance-app
-          # 開発repoのworkflow TODO: tagを自動的に更新ができるように
+          # 開発repoのworkflow TODO: tagを自動的に更新ができるように !
           image: dkerlzeph/attendance-management:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
